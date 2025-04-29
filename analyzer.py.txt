@@ -1,0 +1,42 @@
+# analyzer.py
+import sqlite3
+from collections import Counter
+
+# Connect to database
+conn = sqlite3.connect('lottery_data.db')
+cursor = conn.cursor()
+
+# Analyze number frequencies for a game
+def analyze_frequencies(game_table):
+    print(f"\nAnalyzing hot and cold numbers for {game_table}...")
+
+    cursor.execute(f"SELECT numbers FROM {game_table}")
+    rows = cursor.fetchall()
+
+    all_numbers = []
+    for row in rows:
+        numbers = row[0].split(',')
+        all_numbers.extend(numbers)
+
+    count = Counter(all_numbers)
+    most_common = count.most_common()
+
+    print("\nHot Numbers (Most Frequent):")
+    for num, freq in most_common[:6]:
+        print(f"Number {num}: {freq} times")
+
+    print("\nCold Numbers (Least Frequent):")
+    for num, freq in most_common[-6:]:
+        print(f"Number {num}: {freq} times")
+
+# Run analysis
+if __name__ == "__main__":
+    games = ["florida_lotto_draws", "cash4life_draws", "megasena_draws"]
+
+    for game in games:
+        try:
+            analyze_frequencies(game)
+        except Exception as e:
+            print(f"Error analyzing {game}: {e}")
+
+conn.close()

@@ -1,0 +1,95 @@
+# scraper.py
+import requests
+from bs4 import BeautifulSoup
+import sqlite3
+import datetime
+
+# Create or connect to SQLite database
+conn = sqlite3.connect('lottery_data.db')
+cursor = conn.cursor()
+
+# Create tables if not exist
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS florida_lotto_draws (
+    date TEXT PRIMARY KEY,
+    numbers TEXT
+)
+''')
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS cash4life_draws (
+    date TEXT PRIMARY KEY,
+    numbers TEXT,
+    cash_ball TEXT
+)
+''')
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS megasena_draws (
+    date TEXT PRIMARY KEY,
+    numbers TEXT
+)
+''')
+conn.commit()
+
+# Florida Lotto Scraper
+def scrape_florida_lotto():
+    print("Scraping Florida Lotto...")
+    url = "https://www.flalottery.com/drawings"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # NOTE: Update parsing logic based on the real page structure
+    draws = soup.select(".gamePageDrawingNumbers div.drawDate")
+
+    for draw in draws[:10]:  # Last 10 draws as example
+        date = draw.get_text(strip=True)
+        numbers_div = draw.find_next("div", class_="drawNumbers")
+        numbers = numbers_div.get_text(strip=True).replace(" ", ",")
+
+        cursor.execute('INSERT OR IGNORE INTO florida_lotto_draws (date, numbers) VALUES (?, ?)', (date, numbers))
+    conn.commit()
+
+# Cash4Life Scraper
+def scrape_cash4life():
+    print("Scraping Cash4Life...")
+    url = "https://www.nylottery.ny.gov/draw-game?game=cash4life"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # NOTE: Update parsing logic based on the real page structure
+    draws = soup.select(".gamePageDrawingNumbers div.drawDate")
+
+    for draw in draws[:10]:
+        date = draw.get_text(strip=True)
+        numbers_div = draw.find_next("div", class_="drawNumbers")
+        numbers_text = numbers_div.get_text(strip=True).split()
+        numbers = ",".join(numbers_text[:-1])
+        cash_ball = numbers_text[-1]
+
+        cursor.execute('INSERT OR IGNORE INTO cash4life_draws (date, numbers, cash_ball) VALUES (?, ?, ?)', (date, numbers, cash_ball))
+    conn.commit()
+
+# Mega-Sena Scraper (Brazil)
+def scrape_megasena():
+    print("Scraping Mega-Sena...")
+    url = "https://loterias.caixa.gov.br/Paginas/Mega-Sena.aspx"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # NOTE: Update parsing logic based on the real page structure
+    numbers_list = soup.select("ul.lista-dezenas li")
+
+    if numbers_list:
+        today = datetime.datetime.today().strftime('%Y-%m-%d')
+        numbers = ",".join([n.get_text(strip=True) for n in numbers_list])
+
+        cursor.execute('INSERT OR IGNORE INTO megasena_draws (date, numbers) VALUES (?, ?)', (today, numbers))
+    conn.commit()
+
+# Run all scrapers
+if __name__ == "__main__":
+    scrape_florida_lotto()
+    scrape_cash4life()
+    scrape_megasena()
+    print("Scraping completed!")
+
+conn.close()

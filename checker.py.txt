@@ -1,0 +1,55 @@
+# checker.py
+import sqlite3
+
+# Your saved tickets (you can edit these manually)
+your_tickets = {
+    "florida_lotto_draws": [
+        {"name": "Ticket 1", "numbers": {"04", "09", "17", "28", "34", "52"}},
+        {"name": "Ticket 2", "numbers": {"07", "15", "23", "31", "39", "45"}},
+    ],
+    "cash4life_draws": [
+        {"name": "Ticket 1", "numbers": {"02", "10", "18", "27", "34", "CashBall:01"}},
+    ],
+    "megasena_draws": [
+        {"name": "Ticket 1", "numbers": {"01", "09", "23", "34", "42", "58"}},
+    ]
+}
+
+# Connect to DB
+conn = sqlite3.connect('lottery_data.db')
+cursor = conn.cursor()
+
+# Compare your tickets against past draws
+def check_tickets(game_name, table_name):
+    print(f"\nChecking your {game_name} tickets...\n")
+    cursor.execute(f"SELECT date, numbers FROM {table_name}")
+    rows = cursor.fetchall()
+
+    for ticket in your_tickets[table_name]:
+        name = ticket["name"]
+        hits = []
+
+        for date, draw in rows:
+            draw_set = set(draw.split(","))
+            ticket_set = set(ticket["numbers"])
+            match_count = len(ticket_set & draw_set)
+            if match_count >= 3:
+                hits.append((date, match_count))
+
+        print(f"🔍 {name}:")
+        if hits:
+            for date, match in hits:
+                print(f" ➤ {match}/6 matched on {date}")
+        else:
+            print(" ➤ No hits found.")
+    print("-" * 40)
+
+# Run checker
+if __name__ == "__main__":
+    check_tickets("Florida Lotto", "florida_lotto_draws")
+    check_tickets("Cash4Life", "cash4life_draws")
+    check_tickets("Mega-Sena", "megasena_draws")
+    print("\n✅ Ticket check complete. Stay focused. Stay consistent!")
+    print("🚀 Great things take time — you're building real momentum.")
+
+conn.close()
