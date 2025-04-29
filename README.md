@@ -1,4 +1,3 @@
-# lottery-data-pipeline
 # Multi-Lottery Data Pipeline and Dashboard
 
 ## Overview
